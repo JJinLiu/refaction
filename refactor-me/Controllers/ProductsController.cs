@@ -2,114 +2,77 @@
 using System.Net;
 using System.Web.Http;
 using refactor_me.Models;
+using System.Collections.Generic;
+using refactor_me.Service;
 
 namespace refactor_me.Controllers
 {
     [RoutePrefix("products")]
     public class ProductsController : ApiController
     {
+
+        private IProductsRepository _productsRepository;
+        private IProductsService _productsService;
+
+        public ProductsController()
+        {
+            _productsRepository = new ProductsRepository();
+            _productsService = new ProductsService();
+        } 
+        
+        //List all the products
         [Route]
         [HttpGet]
-        public Products GetAll()
+        public IEnumerable<ProductDto> ListAll()
         {
-            return new Products();
+            var productsList = _productsRepository.ListAllProducts();
+            return productsList;
         }
 
+        //Search product by name
         [Route]
         [HttpGet]
-        public Products SearchByName(string name)
+        public IEnumerable<ProductDto> SearchByName(string name)
         {
-            return new Products(name);
+            var productsList = _productsRepository.ListProductsByName(name);
+            return productsList;
         }
 
+        //Get a specific product by productid
         [Route("{id}")]
         [HttpGet]
-        public Product GetProduct(Guid id)
+        public ProductDto Get(Guid id)
         {
-            var product = new Product(id);
-            if (product.IsNew)
+            //If the product doesn't exist, throw exception
+            if (_productsRepository.IsNew(id))
                 throw new HttpResponseException(HttpStatusCode.NotFound);
 
+            var product = _productsRepository.GetProductById(id);
             return product;
         }
 
+        //Create a new product
         [Route]
         [HttpPost]
         public void Create(Product product)
         {
-            product.Save();
+            _productsService.Save(product);
         }
 
+        //Update an existing product
         [Route("{id}")]
         [HttpPut]
         public void Update(Guid id, Product product)
         {
-            var orig = new Product(id)
-            {
-                Name = product.Name,
-                Description = product.Description,
-                Price = product.Price,
-                DeliveryPrice = product.DeliveryPrice
-            };
-
-            if (!orig.IsNew)
-                orig.Save();
+            _productsService.Update(id, product);
         }
 
+        //Delete an existing product
         [Route("{id}")]
         [HttpDelete]
         public void Delete(Guid id)
         {
-            var product = new Product(id);
-            product.Delete();
-        }
-
-        [Route("{productId}/options")]
-        [HttpGet]
-        public ProductOptions GetOptions(Guid productId)
-        {
-            return new ProductOptions(productId);
-        }
-
-        [Route("{productId}/options/{id}")]
-        [HttpGet]
-        public ProductOption GetOption(Guid productId, Guid id)
-        {
-            var option = new ProductOption(id);
-            if (option.IsNew)
-                throw new HttpResponseException(HttpStatusCode.NotFound);
-
-            return option;
-        }
-
-        [Route("{productId}/options")]
-        [HttpPost]
-        public void CreateOption(Guid productId, ProductOption option)
-        {
-            option.ProductId = productId;
-            option.Save();
-        }
-
-        [Route("{productId}/options/{id}")]
-        [HttpPut]
-        public void UpdateOption(Guid id, ProductOption option)
-        {
-            var orig = new ProductOption(id)
-            {
-                Name = option.Name,
-                Description = option.Description
-            };
-
-            if (!orig.IsNew)
-                orig.Save();
-        }
-
-        [Route("{productId}/options/{id}")]
-        [HttpDelete]
-        public void DeleteOption(Guid id)
-        {
-            var opt = new ProductOption(id);
-            opt.Delete();
-        }
+            _productsService.Delete(id);
+        } 
     }
 }
